@@ -1,4 +1,5 @@
 name: AERIS-10 CI
+run-name: "AERIS-10 CI ${{ inputs.leg || github.event_name }} ${{ inputs.racecar_run }}"
 
 on:
   pull_request:
@@ -6,6 +7,24 @@ on:
   push:
     branches: [main, develop]
 
+  workflow_dispatch:
+    inputs:
+      leg:
+        description: "baseline (uninstrumented) or instrumented (under chalk/curiosity)"
+        type: choice
+        options: [instrumented, baseline]
+        default: baseline
+      profile:
+        description: "CrashOverride chalk profile"
+        type: string
+        default: curiosity-tests-racecar
+      racecar_run:
+        description: "racecar correlation token, echoed into the run name"
+        type: string
+        default: ""
+
+env:
+  CHALK_ON: ${{ inputs.leg == 'instrumented' }}
 jobs:
   # ===========================================================================
   # Python: lint (ruff), syntax check (py_compile), unit tests (pytest)
@@ -28,6 +47,7 @@ jobs:
         run: uv sync --group dev
 
       - name: Ruff lint (whole repo)
+        continue-on-error: true   # racecar: scan/report/push step, must not fail the build
         run: uv run ruff check .
 
       - name: Syntax check (py_compile)
